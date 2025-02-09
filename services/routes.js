@@ -275,10 +275,10 @@ router.get('/vehicles', async (req, res) => {
  *             properties:
  *               startAddress:
  *                 type: string
- *                 example: "10 Downing Street, London"
+ *                 example: "Chambery"
  *               endAddress:
  *                 type: string
- *                 example: "Eiffel Tower, Paris"
+ *                 example: "Paris"
  *     responses:
  *       200:
  *         description: Succès
@@ -429,6 +429,214 @@ router.post('/calculate-travel-time', (req, res) => {
       res.status(500).json({ error: 'Erreur lors du calcul du temps de trajet' });
   }
 });
+
+function haversineDistance([lat1, lon1], [lat2, lon2]) {
+  const R = 6371; 
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * @swagger
+ * /simulate-journey:
+ *   post:
+ *     summary: Simule un trajet électrique en utilisant la puissance de la borne pour calculer le temps de recharge.
+ *     description: Géocode le départ/arrivée, récupère la route, segmente selon l'autonomie. Quand la batterie est vide, cherche la borne la plus puissante.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               startAddress:
+ *                 type: string
+ *                 example: "Chambéry"
+ *               endAddress:
+ *                 type: string
+ *                 example: "Paris"
+ *               autonomyKm:
+ *                 type: number
+ *                 example: 200
+ *                 description: Autonomie totale du véhicule en km
+ *               batteryKwh:
+ *                 type: number
+ *                 example: 50
+ *                 description: Capacité de la batterie en kWh (pour calculer la recharge)
+ *     responses:
+ *       200:
+ *         description: Résultat de la simulation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 route:
+ *                   type: object
+ *                 stops:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       lat:
+ *                         type: number
+ *                       lon:
+ *                         type: number
+ *                       chosenStation:
+ *                         type: object
+ *                       rechargeTime:
+ *                         type: number
+ *                       segmentDistance:
+ *                         type: number
+ *                 totalDistance:
+ *                   type: number
+ *                 totalTime:
+ *                   type: number
+ *       400:
+ *         description: Paramètres invalides
+ *       500:
+ *         description: Erreur interne
+ */
+router.post('/simulate-journey', async (req, res) => {
+  try {
+    const { startAddress, endAddress, autonomyKm, batteryKwh } = req.body;
+
+    if (!startAddress || !endAddress || !autonomyKm || !batteryKwh) {
+      return res.status(400).json({
+        error: "Paramètres requis : startAddress, endAddress, autonomyKm, batteryKwh"
+      });
+    }
+
+    // 1) Géocodage
+    const [startCoords, endCoords] = await Promise.all([
+      geocodeAddress(startAddress),
+      geocodeAddress(endAddress),
+    ]);
+    if (!startCoords || !endCoords) {
+      return res.status(400).json({
+        error: "Impossible de géocoder l'une des adresses."
+      });
+    }
+
+    // 2) Récupérer la route
+    const routeData = await getRoute([
+      [startCoords.lon, startCoords.lat],
+      [endCoords.lon, endCoords.lat],
+    ]);
+    if (!routeData || !routeData.routes || routeData.routes.length === 0) {
+      return res.status(400).json({
+        error: "Aucun itinéraire trouvé."
+      });
+    }
+
+    // 3) Décoder la polyline
+    const decodedPolyline = polyline.decode(routeData.routes[0].geometry);
+    if (decodedPolyline.length < 2) {
+      return res.status(400).json({
+        error: "Polyline invalide."
+      });
+    }
+
+    let remainingRange = autonomyKm; // en km
+    let totalDistance = 0;
+    let totalTime = 0; // en heures
+    const stops = []; // Array d'objets décrivant chaque arrêt
+
+    // Parcours
+    for (let i = 0; i < decodedPolyline.length - 1; i++) {
+      const current = decodedPolyline[i];
+      const next = decodedPolyline[i + 1];
+      const distSegment = haversineDistance(current, next);
+
+      // Vérif si on peut rouler
+      if (remainingRange >= distSegment) {
+        // on roule
+        remainingRange -= distSegment;
+        totalDistance += distSegment;
+      } else {
+        // Arrêt recharge
+        const lat = current[0];
+        const lon = current[1];
+
+        // 1) Chercher les bornes
+        const stations = await getChargingStations(lat, lon);
+        if (!stations || stations.length === 0) {
+          return res.status(400).json({
+            error: `Pas de borne trouvée autour de [${lat}, ${lon}] => Trajet impossible.`
+          });
+        }
+
+        // 2) Choisir la borne la plus puissante
+        let chosenStation = null;
+        let maxPower = 0;
+        stations.forEach(st => {
+          // st.power_max peut être number ou string
+          const p = (typeof st.power_max === 'number') 
+                      ? st.power_max 
+                      : (parseFloat(st.power_max) || 0);
+          if (p > maxPower) {
+            maxPower = p;
+            chosenStation = st;
+          }
+        });
+        // Si on n'a pas trouvé => default 0 => on peut estimer un temps arbitrary
+        if (!chosenStation) {
+          chosenStation = stations[0];
+          maxPower = 0;
+        }
+
+        // 3) Calculer le temps de recharge = batteryKwh / maxPower
+        // S'il est 0, mettons un temps par défaut (2h) ou on jette une erreur
+        let rechargeTimeH = 2; // par défaut
+        if (maxPower > 0) {
+          rechargeTimeH = batteryKwh / maxPower; 
+        }
+
+        // 4) Ajout dans stops
+        stops.push({
+          lat,
+          lon,
+          chosenStation,
+          rechargeTime: +rechargeTimeH.toFixed(2),
+          segmentDistance: +distSegment.toFixed(2),
+        });
+
+        // On ajoute ce temps de recharge
+        totalTime += rechargeTimeH;
+
+        // On recharge => range à fond
+        remainingRange = autonomyKm;
+
+        // On consomme le segment
+        remainingRange -= distSegment;
+        totalDistance += distSegment;
+      }
+
+      // Ajout du temps de conduite
+      const averageSpeed = 100; 
+      totalTime += distSegment / averageSpeed;
+    }
+
+    return res.json({
+      route: routeData,
+      stops,
+      totalDistance: +totalDistance.toFixed(2),
+      totalTime: +totalTime.toFixed(2),
+    });
+  } catch (error) {
+    console.error('[simulate-journey] Erreur :', error);
+    return res.status(500).json({
+      error: 'Erreur lors de la simulation de trajet.'
+    });
+  }
+});
+
 
 
 module.exports = router;

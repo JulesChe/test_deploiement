@@ -7,10 +7,42 @@ const cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const apiRouter = require('./services/routes'); 
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+
+
 
 
 var app = express();
 
+// Configuration Swagger
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "API de Planification de Trajet Électrique",
+      version: "1.0.0",
+      description: "Documentation de l'API pour la planification de trajets avec arrêts recharge.",
+    },
+    servers: [
+      {
+        url: "http://localhost:3000/api",
+        description: "Serveur local",
+      },
+      {
+        url: "https://projet-info802.azurewebsites.net/api",
+        description: "Serveur de production (Azure)",
+      },
+
+    ],
+  },
+  apis: ["./services/routes.js"],
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+console.log("📄 Documentation Swagger disponible à /api-docs");
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');

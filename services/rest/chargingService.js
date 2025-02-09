@@ -2,7 +2,7 @@ const axios = require('axios');
 const { CHARGING_STATIONS_API } = require('../../config/env');
 
 const getChargingStations = async (latitude, longitude) => {
-  const radius = 2000; // Rayon en mètres
+  const radius = 20000; // Rayon en mètres
   const apiUrl = `${CHARGING_STATIONS_API}&geofilter.distance=${latitude},${longitude},${radius}`;
 
 
