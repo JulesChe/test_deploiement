@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planification de trajet - Véhicules électriques</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@mapbox/polyline"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Styles supplémentaires */
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+        #form-container {
+            position: absolute;
+            top: 50%;
+            left: 30px;
+            transform: translateY(-50%);
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="form-container" class="w-96 p-6 space-y-4">
+        <h2 class="text-xl font-bold text-gray-800">Planifiez votre itinéraire</h2>
+        <form id="routeForm" class="space-y-4">
+            <div>
+                <label for="start" class="block text-sm font-medium text-gray-700">Adresse de départ</label>
+                <input id="start" type="text" placeholder="Entrez l'adresse" class="w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500" required />
+            </div>
+            <div>
+                <label for="end" class="block text-sm font-medium text-gray-700">Adresse d'arrivée</label>
+                <input id="end" type="text" placeholder="Entrez l'adresse" class="w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500" required />
+            </div>
+            <div>
+                <label for="vehicle" class="block text-sm font-medium text-gray-700">Sélectionnez un véhicule</label>
+                <select id="vehicle" class="w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>Chargement des véhicules...</option>
+                </select>
+            </div>
+            <button id="submitButton" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
+              Calculer l'itinéraire
+          </button>
+          <div id="spinner" style="display: none; text-align: center;">
+              <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+          </div>          
+        </form>
+    </div>
+    <script>
+        // Initialisation de la carte
+        var map = L.map('map').setView([45.7640, 4.8357], 13); // Coordonnées de Lyon
+        
+        // Ajout d'un fond de carte OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+    </script>
+    <script src="javascripts/scriptMapStations.js"></script>
+</body>
+</html>

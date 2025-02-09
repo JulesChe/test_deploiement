@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "undefined/subscriptions/c57bea0a-da3c-4fa7-8f92-7e41b18782b7/resourceGroups/projet-info802/providers/Microsoft.Web/sites/projet-info802",
+    "appService.deploySubpath": "."
+}
