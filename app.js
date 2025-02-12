@@ -14,6 +14,13 @@ const swaggerUi = require("swagger-ui-express");
 
 
 var app = express();
+app.use(cors());
+
+app.use(cors({
+  origin: 'https://projet-info802.azurewebsites.net',
+  methods: 'GET,POST',
+  allowedHeaders: 'Content-Type,Authorization',
+}));
 
 // Configuration Swagger
 const swaggerOptions = {
@@ -36,13 +43,20 @@ const swaggerOptions = {
 
     ],
   },
-  apis: ["./services/routes.js"],
+  apis: [path.join(__dirname, "services", "routes.js")],
 };
+
+
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 console.log("📄 Documentation Swagger disponible à /api-docs");
+console.log("📄 Swagger chargé avec les routes suivantes :", JSON.stringify(swaggerDocs.paths, null, 2));
+console.log("📂 Dossier actuel :", __dirname);
+console.log("📄 Chemin absolu du fichier routes.js :", path.join(__dirname, "./services/routes.js"));
+
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -54,13 +68,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', apiRouter);
 
-app.use(cors());
 
-app.use(cors({
-  origin: 'https://projet-info802.azurewebsites.net',
-  methods: 'GET,POST',
-  allowedHeaders: 'Content-Type,Authorization',
-}));
+
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
