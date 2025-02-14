@@ -21,9 +21,6 @@ $ npm install
 ```
 
 ````
-
----
-
 ## 🚀 Lancement du projet en local
 
 ```bash
