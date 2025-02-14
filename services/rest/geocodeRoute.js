@@ -2,7 +2,7 @@ const axios = require('axios');
 
 const geocodeAddress = async (address) => {
   const apiUrl = 'https://api.openrouteservice.org/geocode/search';
-  const apiKey = '5b3ce3597851110001cf6248226b37505aa2458ebb5c2891f9a98e08';
+  const apiKey = process.env.ORS_API_KEY;
 
   try {
     const response = await axios.get(apiUrl, {

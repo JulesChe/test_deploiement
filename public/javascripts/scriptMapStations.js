@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   
           // Affichage du temps total estimé
-          document.getElementById('totalTime').innerText = `Temps total estimé : ${totalTime.toFixed(2)} heures`;
+          document.getElementById('totalTime').innerText = `Temps total estimé : ${convertHoursToHoursMinutes(totalTime)}`;
   
         } catch (error) {
             console.error('Erreur :', error.message);
@@ -166,4 +166,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return 22; 
   }
   
-  
+  /**
+ * Convertit un nombre d'heures décimal en une chaîne "Xh Ym".
+ *
+ * @param {number} decimalHours - Le nombre d'heures (ex: 2.75)
+ * @returns {string} - Le temps formaté (ex: "2h 45m")
+ */
+function convertHoursToHoursMinutes(decimalHours) {
+  // On récupère la partie entière pour les heures
+  const hours = Math.floor(decimalHours);
+  // On calcule les minutes en multipliant la partie décimale par 60
+  const minutes = Math.round((decimalHours - hours) * 60);
+  return `${hours}h ${minutes}m`;
+}

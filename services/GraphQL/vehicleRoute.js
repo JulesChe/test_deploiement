@@ -6,8 +6,8 @@ const { VEHICLE_API_KEY } = require('../../config/env');
 const GRAPHQL_ENDPOINT = 'https://api.chargetrip.io/graphql';
 const HEADERS = {
   'Content-Type': 'application/json',
-  'x-client-id': '67ab59ed4802aaa070546d8c', 
-  'x-app-id': '67ab59ed4802aaa070546d8e',
+  'x-client-id': process.env.VEHICLE_CLIENT_KEY, 
+  'x-app-id': process.env.VEHICLE_APP_KEY,
 };
 
 // Fonction pour récupérer la liste des véhicules

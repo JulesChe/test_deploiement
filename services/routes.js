@@ -334,7 +334,6 @@ router.post('/route-with-stations', async (req, res) => {
       return res.status(400).json({ error: 'Impossible de géocoder les adresses fournies.' });
     }
 
-    // Calculer l'itinéraire entre les deux coordonnées
     const route = await getRoute(formattedCoordinates);
 
     // Extraire les coordonnées de l'itinéraire
@@ -345,10 +344,8 @@ router.post('/route-with-stations', async (req, res) => {
       return await getChargingStations(lat, lon);
     });
 
-    // Attendre toutes les réponses des stations
     const stationsResults = await Promise.all(stationsPromises);
 
-    // Fusionner et dédupliquer les bornes
     const allStations = stationsResults.flat();
     const uniqueStations = allStations.filter(
       (station, index, self) => index === self.findIndex((s) => s.id === station.id)
@@ -408,7 +405,7 @@ router.post('/calculate-travel-time', (req, res) => {
   }
 
   try {
-      // Vitesse moyenne du véhicule (en km/h)
+      // Vitesse moyenne du véhicule
       const averageSpeed = 100.0;
 
       // Nombre d'arrêts de recharge nécessaires (on ne recharge pas avant de partir)
@@ -543,10 +540,10 @@ router.post('/simulate-journey', async (req, res) => {
       });
     }
 
-    let remainingRange = autonomyKm; // en km
+    let remainingRange = autonomyKm; 
     let totalDistance = 0;
-    let totalTime = 0; // en heures
-    const stops = []; // Array d'objets décrivant chaque arrêt
+    let totalTime = 0; 
+    const stops = []; 
 
     // Parcours
     for (let i = 0; i < decodedPolyline.length - 1; i++) {
@@ -576,7 +573,6 @@ router.post('/simulate-journey', async (req, res) => {
         let chosenStation = null;
         let maxPower = 0;
         stations.forEach(st => {
-          // st.power_max peut être number ou string
           const p = (typeof st.power_max === 'number') 
                       ? st.power_max 
                       : (parseFloat(st.power_max) || 0);
@@ -591,9 +587,8 @@ router.post('/simulate-journey', async (req, res) => {
           maxPower = 0;
         }
 
-        // 3) Calculer le temps de recharge = batteryKwh / maxPower
-        // S'il est 0, mettons un temps par défaut (2h) ou on jette une erreur
-        let rechargeTimeH = 2; // par défaut
+        // 3) Calculer le temps de recharge
+        let rechargeTimeH = 2; 
         if (maxPower > 0) {
           rechargeTimeH = batteryKwh / maxPower; 
         }
