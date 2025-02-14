@@ -19,7 +19,7 @@ $ git clone https://github.com/JulesChe/test_deploiement.git
 # Installer les dépendances
 $ npm install
 ```
-## 🚀 Lancement du projet en local
+## Lancement du projet en local
 
 ```bash
 # Démarrer le serveur Express
